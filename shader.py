@@ -1,30 +1,36 @@
 import pygame
 import hashlib
 from PIL import Image
-import os
+from os import system,mkdir,listdir
+from os.path import exists,abspath,sep,dirname
 from ctypes import *
 from time import time,sleep
 from sys import platform
+from SpeedTest import time_runtime
 
+
+@time_runtime
 def isLoaded(lib):
    #this one shows an error on my system recently, but still works
-   ret = os.system("lsof | grep " +lib + ">/dev/null" )
+   ret = system("lsof | grep " +lib + ">/dev/null" )
    return (ret == 0)
 lib = CDLL("libdl.so")
 
+@time_runtime
 def load_cuda(shader):
-  #very important function, compiling the shader files with the Nvidia compiler
-  #and loading into ctypes
-  #loaded every time a shader is changed or the running shader file is edited
+  '''very important function, compiling the shader files with the Nvidia compiler
+  and loading into ctypes
+  loaded every time a shader is changed or the running shader file is edited'''
   global mandel
-  os.system("nvcc "+shader+" -arch sm_61 -Xcompiler -fPIC -shared -o frac.so")
+  system("nvcc "+shader+" -arch sm_61 -Xcompiler -fPIC -shared -o frac.so")
   LibName = 'frac.so'
-  AbsLibPath = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + LibName
+  AbsLibPath = dirname(abspath(__file__)) + sep + LibName
   while isLoaded("frac.so"): #this closes the old ctypes function if loaded
      mandel.exit_cuda()
      lib.dlclose(mandel._handle) 
   mandel = CDLL(AbsLibPath,mode=RTLD_LOCAL)
 
+@time_runtime
 def hash(filename):
   h = hashlib.sha256()
   b  = bytearray(128*1024)
@@ -33,7 +39,6 @@ def hash(filename):
     for n in iter(lambda : f.readinto(mv), 0):
         h.update(mv[:n])
   return h.hexdigest()
-
 
 class Button():
   active = False
@@ -50,10 +55,12 @@ class Button():
     x = int(self.pos[0]+int(self.size[0]/2)-len(self.text[2:])*4.5)
     y = int(self.pos[1]+int(self.size[1]/2)-12)
     self.parent.screen.blit(self.text_surface,(x,y))
+
   def click(self,pos):
     if pos[0] > self.pos[0] and pos[0] < self.pos[0]+self.size[0] and pos[1]>self.pos[1] and pos[1] < self.pos[1]+self.size[1]:
       self.action()
       return True
+
   def action(self):
     pass
 
@@ -73,6 +80,7 @@ class AdvButton(Button):
     self.command = command
     for param in kwargs:
       setattr(self,param,kwargs[param])
+
   def action(self):
     self.command()
     if self.aa:
@@ -86,12 +94,11 @@ class AdvButton(Button):
         self.active = True
     
     if self.reset:
-      os.system("rm -r ./pics/*.png")
+      system("rm -r ./pics/*.png")
       self.parent.reset()
       self.parent.jump(0)
     if self.jump:
       self.parent.jump(0)
-
 
 class Textfeld():
   def __init__(self,parent,pos,size,value):
@@ -113,11 +120,9 @@ class Textfeld():
     self.text = str(wert)
     self.text_surface = self.parent.myfont.render(self.text,False,(0,0,0))
 
-
-
 class Animation():
     func = "Mandel"
-    shaderfile = "shaders/frac.cu"
+    shaderfile = "shaders/ferrofluid.cu"
     loadfunc = True
     size = (640,640)
     screen = False
@@ -129,11 +134,15 @@ class Animation():
     f_size = 0
     timestamp= 1
     autozoom = False
+    video_name = 'out.mp4'
     def __init__(self,**kwargs):
         if self.loadfunc:
           self.reset()
         for param in kwargs:
           setattr(self,param,kwargs[param])
+
+        if not exists("pics/"):
+            mkdir("pics")
         self.init_end()
 
     def init_end(self):
@@ -152,10 +161,13 @@ class Animation():
         mandel.init_cuda(self.size[0],self.size[1])
         self.frame = 0
         mandel.set_frame(0)
-	
+
     def make_picture(self):
-        self.fun(self.size[0],self.size[1],self.result)
-        
+        @time_runtime
+        def inner():
+          self.fun(self.result)
+        inner()
+
     def reset(self):
         self.frame = 0
         #os.system("rm log.txt")
@@ -224,17 +236,20 @@ class Animation():
         setattr(self, attr, getattr(self, attr) * value)
 
     def mk_video(self,ff = '.bmp'):
-        os.system("ffmpeg -f image2 -i ./pics/%05d"+ff+" -pix_fmt yuv420p -y out.mp4")
+        '''creating video from bmp files in the pics folder using ffmpeg
+        libx265 seems to be the latest codec with the best compression atm
+        pix_fmr yuv420p is set, because otherwise vlc player shows a black screen in the video on ubuntu
+        I used to have the preset veryslow in order to reduce file size of the video, but since libx265 this seems to be
+        a waste of time and here increasing the filesize compared to veryfast (don't know why)'''
+        system("ffmpeg -f image2 -i ./pics/%05d"+ff+" -preset veryfast -c:v libx265 -pix_fmt yuv420p -y "+self.video_name)
 
     def log(self):
         return
-        with open("log.txt","a") as f:
-          pass
 
     def make_buttons(self):
         self.buttons = []
         y = 0
-        for f in os.listdir("shaders"):
+        for f in listdir("shaders"):
           self.buttons.append(AdvButton(self,(self.size[0],y*20),(200,20), f,(lambda x =f:self.set_cuda_function("shaders/"+x)),reset=True,aa=True,group="Shaders"))
           y+=1
 
@@ -243,7 +258,6 @@ class Animation():
             AdvButton(self, (self.size[0], self.size[1] + 30), (50, 30), "Auto", lambda: self.toggle("autozoom"),
                       aa=True, toggle=True))
         self.textfelder.append(Textfeld(self, (0, self.size[1] + 30), (70, 30), "frame"))
-
 
     def window(self):
         '''Initialisiere Alle Einstellungen und Buttons für Pygame'''
@@ -303,7 +317,6 @@ class Animation():
                     left_click = True
                   if event.button==3:
                     right_click = True 
-                    #self.jump(-self.steps)
                   pos = pygame.mouse.get_pos()
                   for button in self.buttons:
                             button.click(pos)
@@ -319,7 +332,11 @@ class Animation():
                    right_click = False
             pygame.display.flip()
         mandel.exit_cuda() #important to free the memory in cuda
-        pygame.quit()
+
+@time_runtime
+def main():
+    Animation(size=(720, 720), autozoom=0).window()
 
 if __name__ == '__main__':
-    Animation(size=(720,720),autozoom=0).window()
+    main()
+    pygame.quit()

@@ -11,9 +11,9 @@ __device__ float map(vec3 p){
   float plane = p.y+0.25*sin(frame/15 + length(pxz)*5)+0.5;
   p.x = fract(p.x/4)*4-2;
   p.z = fract(p.z/4)*4-2;
-  float ball = dist(p,vec3(0)+vec3(0,1+sinfr*1.5 ,0))-1;
-  ball = ball*0.1;
-  return smin(ball,smin(plane,plane2,1.1),0.9 );
+  float ball = dist(p,vec3(0)+vec3(0,1+sinfr*1.5 ,0))-0.5;
+  ball *= 0.1;
+  return smin(ball,smin(plane,plane2,1.5),0.5 );
 }
 
 __device__ vec3 normal(vec3 p){
@@ -43,8 +43,8 @@ __global__ void Mandel_calc(unsigned char* image_buffer){
   unsigned short int col = (blockIdx.x * blockDim.x + threadIdx.x);  // HEIGHT
   unsigned int idx = 3*(row * window.x + col);
 
-  float y0 = - (float) (row -window.x/2)/(window.x/2)*2;
-  float x0 = (float) (col -window.y/2)/(window.y/2)*2;
+  float y0 = - (float) (row -windowD2.x)/(windowD2.x)*2; 
+  float x0 = (float) (col -windowD2.y)/(windowD2.y)*2;
   float r,g,b;  
   
   
@@ -70,28 +70,4 @@ __global__ void Mandel_calc(unsigned char* image_buffer){
   }
 
 
-extern "C" {
- unsigned char*  d_image_buffer;
- unsigned int arr_size;
-
-__host__ void init_cuda(const int width, const int height){
-  arr_size = 3 * width * height;
-  cudaMallocManaged(&d_image_buffer, arr_size*sizeof(unsigned char));
-  printf("Cuda Memory allocated\n");
-}
-
-__host__ void Mandel(const int width, const int height,unsigned char* image_buffer){
-  dim3 block_size(16, 16);
-  dim3 grid_size(width / block_size.x, height / block_size.y);
-  Mandel_calc<<<grid_size, block_size>>>(d_image_buffer);
-  cudaPeekAtLastError();
-  cudaDeviceSynchronize();
-  cudaMemcpy(image_buffer, d_image_buffer, arr_size, cudaMemcpyDeviceToHost);
-  }
-__host__ void exit_cuda(){
-  cudaFree(d_image_buffer);
-  printf("CudaMemory free\n");
-  
-}
-
-}
+#include "../main.cu"
