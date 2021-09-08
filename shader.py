@@ -6,17 +6,14 @@ from os.path import exists,abspath,sep,dirname
 from ctypes import *
 from time import time,sleep
 from sys import platform
-from SpeedTest import time_runtime
 
 
-@time_runtime
 def isLoaded(lib):
    #this one shows an error on my system recently, but still works
    ret = system("lsof | grep " +lib + ">/dev/null" )
    return (ret == 0)
 lib = CDLL("libdl.so")
 
-@time_runtime
 def load_cuda(shader):
   '''very important function, compiling the shader files with the Nvidia compiler
   and loading into ctypes
@@ -30,7 +27,6 @@ def load_cuda(shader):
      lib.dlclose(mandel._handle) 
   mandel = CDLL(AbsLibPath,mode=RTLD_LOCAL)
 
-@time_runtime
 def hash(filename):
   h = hashlib.sha256()
   b  = bytearray(128*1024)
@@ -163,10 +159,7 @@ class Animation():
         mandel.set_frame(0)
 
     def make_picture(self):
-        @time_runtime
-        def inner():
-          self.fun(self.result)
-        inner()
+        self.fun(self.result)
 
     def reset(self):
         self.frame = 0
@@ -333,7 +326,6 @@ class Animation():
             pygame.display.flip()
         mandel.exit_cuda() #important to free the memory in cuda
 
-@time_runtime
 def main():
     Animation(size=(720, 720), autozoom=0).window()
 

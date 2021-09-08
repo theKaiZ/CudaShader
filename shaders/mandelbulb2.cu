@@ -14,7 +14,7 @@ __device__ float mandelbulb2(vec3 pos){
     r = length(z);
     if(r>2.5)
       break;
-    float theta = acos(z.z /r)  * power;
+    float theta = acos(z.z /(r+sinfr))  * power;
     float phi = atan2(z.y,z.x) * power;
     float zr = pow(r,power);
     dr = pow(r,power-1)*power*dr+1;
@@ -30,7 +30,7 @@ __device__ float mandelbulb(vec3 pos){
   float dr = 1;
   float r = 1;
   vec3 z = pos;
-  float power =3 + cosfr;
+  float power = 3 + cosfr;
   for(int i = 0; i < 15; i++){
     r = length(z);
     if(r>2.5)
@@ -41,17 +41,17 @@ __device__ float mandelbulb(vec3 pos){
     dr = pow(r,power-1)*power*dr+1;
     
     z = vec3(sin(theta)*cos(phi),sin(phi)*sin(theta),cos(theta))*zr;
-    z = z+ pos;
+    z = z + pos;
   
   }
   return 0.5 * log(r) * r /dr;
 }
 
 __device__ float map(vec3 p){ 
-  float plane = sinfr*4.5 + 5.5-p.z;
+  float plane = p.y+10;//sinfr*4.5 + 5.5-p.z;
   float bulb1 = abs(mandelbulb(p));
   float bulb2 = abs(mandelbulb2(p));
-  float circle = abs(dist(p,vec3(0)+vec3(0,0,0.15+0.25*sinfr))-1.5+0.2*cosfr)-0.2+0.05*sinfr;
+  float circle = abs(dist(p,vec3(0)+vec3(0,0,0.15+0.25*sinfr))-1.5+0.5*cosfr)-0.2+0.05*sinfr;
   return smin(max(smin(bulb1,bulb2,0.7+0.45*sinfr),circle),plane,2);
 }
 
@@ -69,7 +69,7 @@ __device__ float trace(vec3 org, vec3 dir){
    {
      vec3 p = org+dir*dist;
      d = map(p);
-     if( d <= 0.00000001){
+     if( d <= 0.0000001){
         break;  
      }
      dist += d;
@@ -82,14 +82,21 @@ __global__ void Mandel_calc(unsigned char* image_buffer){
   unsigned short int col = (blockIdx.x * blockDim.x + threadIdx.x);  // HEIGHT
   unsigned int idx = 3*(row * window.x + col);
 
-  float y0 = - (float) (row -window.x/2)/(window.x/2);
-  float x0 = (float) (col -window.y/2)/(window.y/2);
+  float zoom = 0.5;
+  float y0 = - (float) (row -windowD2.x)/(windowD2.x)*zoom;
+  float x0 = (float) (col -windowD2.y)/(windowD2.y)*zoom;
   float r,g,b;  
   
   
-  vec3 direction = normalize(vec3(x0,y0, 1));
+  //vec3 direction = normalize(vec3(x0,y0, 1));
   vec3 light = vec3(sinfr*2,5.0+2*cosfr,5.0*sinfr);
-  vec3 origin =  vec3(0,0,-2.5);
+  //vec3 origin =  vec3(0,0,-2.5);
+  vec3 origin =  vec3(sinfr*5,2+2*sinfr,cosfr*5);
+  vec3 w = normalize(origin-vec3(0));
+  vec3 u = normalize(cross(vec3(0,1,0),w));
+  vec3 v = cross(w,u);
+  vec3 direction = u*x0+v*y0-w;
+  direction = normalize(direction);
 
   float dist = trace(origin,direction);
   vec3 p = origin + direction*dist;

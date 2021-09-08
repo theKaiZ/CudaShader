@@ -44,14 +44,7 @@ __device__ struct vec2{
   }
 };
 
-struct vec2int{
-  //that is now a little messy but i wanted to get rid of  putting the window size to the Mandel function every call
-  int x;
-  int y;
-  vec2int (){}
-  vec2int (int x, int y): x(x), y(y){}
-  vec2int ( int a): x(a),y(a){}
-};
+
   //vec2 calculations except operators
 
 __device__ float length(vec2 v){
@@ -206,7 +199,6 @@ extern "C"{__host__ void set_mouse(float x, float y){
   
 __device__ vec2 window;
 __device__ vec2 windowD2;
-vec2int window_host;
 __global__ void set_window_g(int x, int y){
   window.x = (float)(x);
 
@@ -214,8 +206,6 @@ __global__ void set_window_g(int x, int y){
   windowD2.x = (float)(x)/2;
   windowD2.y = (float)(y)/2;}
 extern "C"{  __host__ void set_window(int x, int y){
-  window_host.x = x;
-  window_host.y = y;
   set_window_g<<<1,1>>>(x,y);}}
 
 
