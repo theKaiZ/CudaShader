@@ -6,6 +6,7 @@ from os import system,mkdir,listdir
 from os.path import exists,abspath,sep,dirname, join
 from ctypes import *
 from myGUI.GUI import myGUI, Rectangular_object, Button
+
 def isLoaded(lib):
    #this one shows an error on my system recently, but still works
    ret = system("lsof | grep " +lib + ">/dev/null" )
@@ -49,7 +50,7 @@ class Shader(Rectangular_object):
         self.result = (c_ubyte * objlength)()
         ### set the window size and stuff
         mandel.set_vec2(0,c_float(self.size[0]),c_float(self.size[1]))
-        mandel.init_cuda(self.size[0],self.size[1])
+        mandel.init_cuda(c_int(self.size[0]),c_int(self.size[1]))
         self.frame = 0
         mandel.set_int(0,0)
 
