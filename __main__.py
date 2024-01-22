@@ -4,8 +4,7 @@ from os.path import join
 import numpy as np
 from sys import platform
 from numba import cuda
-
-if cuda.is_available() and 0:
+if cuda.is_available():
     if platform == "linux":
         from cpp_cuda.Shader import Shader
     else:
@@ -18,8 +17,6 @@ class ShaderGUI(myGUI):
     size = np.array([800,800])
     FPS = 25
     shader = None
-
-
     def exit_game(self):
         self.shader.removefromGUI()
 
@@ -27,6 +24,7 @@ class ShaderGUI(myGUI):
         dir = "cpp_cuda/shaders"
         for i, filename in enumerate(listdir(dir)):
             Button(self, (self.size[0]-100,i*20),(100,20), filename,command=lambda f=filename:self.set_shader(join(dir,f)))
+
     def set_shader(self, shaderfile):
         if self.shader is not None:
             print("delete old shader")

@@ -14,6 +14,8 @@ class Shader(Rectangular_object):
     def __init__(self, parent, shadername=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.fun = calc_shader_on
+        self.size = np.array([480,480])
+
         objlength = self.size[0] * self.size[1] * 3
         self.result = np.zeros(objlength, dtype=np.uint8)
         ### set the window size and stuff

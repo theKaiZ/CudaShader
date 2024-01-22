@@ -1,17 +1,19 @@
 
 __device__ void color(float r, float g, float b, unsigned char* buffer){
   if(r>255)
-   buffer[0] = 255;
+    buffer[0] = 255;
   else
-  buffer[0] = (unsigned char)(r);
-  if(r>255)
+    buffer[0] = (unsigned char)(r);
+
+  if(g>255)
     buffer[1] = 255;
   else
     buffer[1] = (unsigned char)(g);
-  if(r>255)
+
+  if(b>255)
     buffer[2] = 255;
   else
-  buffer[2] = (unsigned char)(b);
+    buffer[2] = (unsigned char)(b);
 }
 
 __device__ struct mat2{
@@ -210,6 +212,9 @@ __global__ void set_int_g(int varnum, int value){
 
 
 extern "C"{
+
+// functions to call from python
+
 __host__ void set_int(int varnum, int value){
    set_int_g<<<1,1>>>(varnum, value);
    }
