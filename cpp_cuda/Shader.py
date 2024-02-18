@@ -59,8 +59,10 @@ class Shader(Rectangular_object):
 
     def update(self):
         self._image = None
-        self.frame += 1
+        #self.frame += 1
         mandel.set_int(0,c_int(self.frame))
+        mandel.set_float(0, c_float(self.parent.min_dist))
+        mandel.set_float(1, c_float(self.parent.eps))
 
     @property
     def image(self):

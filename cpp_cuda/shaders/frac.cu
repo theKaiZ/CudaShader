@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "../shader.cu"
 
-#define EPS 0.0001
+//#define EPS 0.0001
 
 __device__ float map(vec3 p){ 
   vec2 pxz = {(p.x-15)+p.z,p.z-7};    

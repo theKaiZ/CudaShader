@@ -1,3 +1,14 @@
+//init global rot variable and the functions to set during runtime
+//remember that __host__ function always has to be inside extern "C" to be accessed by C-types
+//btw check if there might be a less dirty way to acess the __device__ variable from __host__ function
+__device__ unsigned short int rot = 0;
+__device__ float frame = 0;
+__device__ float sinfr = 0;
+__device__ float cosfr = 0;
+__device__ float MIN_DIST = 0.015;   // Minimum distance value for the trace funciton
+__device__ float EPS = 0.01;
+
+
 
 __device__ void color(float r, float g, float b, unsigned char* buffer){
   if(r>255)
@@ -145,6 +156,16 @@ __device__ float dist(vec3 a, vec3 b){
 __device__ vec3 normalize(vec3 v){
   float betrag = length(v);
   return {v.x/betrag,v.y/betrag,v.z/betrag};}
+
+
+__device__ vec3 normal(vec3 p, float EPS){
+    /*an approximation to the normal vector from a surface*/
+    vec3 q = vec3(map(vec3(p.x + EPS, p.y, p.z)).x  - map(vec3(p.x - EPS, p.y, p.z)).x,
+                  map(vec3(p.x, p.y + EPS, p.z )).x - map(vec3(p.x, p.y - EPS, p.z)).x,
+                  map(vec3(p.x, p.y, p.z + EPS)).x  - map(vec3(p.x, p.y, p.z - EPS)).x);
+    return normalize(q);}
+
+
   
   
 //not sure about the following 2 formulas, a max between a vector and a float seems weird to me  
@@ -170,19 +191,14 @@ __device__ struct vec4{
   __device__ vec4(vec2 v1, vec2 v2): x(v1.x),y(v1.y),z(v2.x),w(v2.y){}
 };
 
-//init global rot variable and the functions to set during runtime
-//remember that __host__ function always has to be inside extern "C" to be accessed by C-types
-//btw check if there might be a less dirty way to acess the __device__ variable from __host__ function
-__device__ unsigned short int rot = 0;
 
 
+// remember some
 __device__ vec2 mouse;
 __device__ vec2 window;
 __device__ vec2 windowD2;
 //same here with the frame
-__device__ float frame = 0;
-__device__ float sinfr = 0;
-__device__ float cosfr = 0;
+
 
 
 __global__ void set_vec2_g(int varnum, float x, float y){
@@ -199,14 +215,22 @@ __global__ void set_vec2_g(int varnum, float x, float y){
 
 }
 
+__global__ void set_float_g(int varnum, float value){
+    if (varnum == 0)
+        MIN_DIST = value;
+    else if (varnum==1)
+        EPS = value;
+}
+
+
 __global__ void set_int_g(int varnum, int value){
     if(varnum==0){
-    frame = (float)value;
-  sinfr = sin(frame*M_PI/180);
-  cosfr = cos(frame*M_PI/180);
+        frame = (float)value;
+        sinfr = sin(frame*M_PI/180);
+        cosfr = cos(frame*M_PI/180);
     }
-    if(varnum==1){
-    rot=value;
+    else if(varnum==1){
+        rot=value;
     }
 }
 
@@ -218,6 +242,10 @@ extern "C"{
 __host__ void set_int(int varnum, int value){
    set_int_g<<<1,1>>>(varnum, value);
    }
+
+__host__ void set_float(int varnum, float value){
+    set_float_g<<<1,1>>>(varnum, value);
+}
 
 
 __host__ void set_vec2(int varnum, float x, float y){
